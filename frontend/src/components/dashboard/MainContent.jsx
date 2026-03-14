@@ -1,13 +1,13 @@
 import { motion } from 'framer-motion';
-import { SPACES, TABS, STATUS_CONFIG, PRIORITY_CONFIG, avatarColor } from '../../utils/constants';
+// Bỏ SPACES ảo đi, chỉ import TABS, STATUS_CONFIG...
+import { TABS, STATUS_CONFIG, PRIORITY_CONFIG, avatarColor } from '../../utils/constants';
 import { CheckIcon } from '../icons';
 
-// --- THÊM onDelete, onToggleStatus VÀO PROPS ---
-const MainContent = ({ user, tasks, activeSpace, setActiveSpace, activeTab, setActiveTab, onDelete, onToggleStatus,onEdit }) => {
+// --- THÊM spaces VÀO PROPS ĐỂ NHẬN DỮ LIỆU THẬT ---
+const MainContent = ({ user, tasks, spaces, activeSpace, setActiveSpace, activeTab, setActiveTab, onDelete, onToggleStatus, onEdit }) => {
   const todayTasks = tasks.filter(t => t.date === 'Hôm nay');
   const yesterdayTasks = tasks.filter(t => t.date === 'Hôm qua');
   const olderTasks = tasks.filter(t => t.date !== 'Hôm nay' && t.date !== 'Hôm qua');
-  
 
   return (
     <div style={{ flex: 1, padding: '32px 40px', minWidth: 0, overflowY: 'auto' }}>
@@ -20,27 +20,31 @@ const MainContent = ({ user, tasks, activeSpace, setActiveSpace, activeTab, setA
         Chào mừng trở lại, <strong style={{ color: '#172b4d' }}>{user?.name}</strong> 👋
       </motion.p>
 
-      {/* Recent spaces */}
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} style={{ marginBottom: 36 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-          <h2 style={{ fontSize: 16, fontWeight: 800, color: '#172b4d', margin: 0 }}>Không gian gần đây</h2>
-        </div>
-        <div style={{ display: 'flex', gap: 16 }}>
-          {SPACES.map((sp, i) => (
-            <motion.div key={sp.id} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 + i * 0.08 }}
-              whileHover={{ y: -3, boxShadow: '0 8px 24px rgba(0,0,0,0.1)' }} onClick={() => setActiveSpace(sp)}
-              style={{ flex: 1, background: 'white', borderRadius: 10, border: activeSpace.id === sp.id ? `2px solid ${sp.color}` : '1px solid #e8eaed', padding: '20px', cursor: 'pointer', transition: 'all 0.15s', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-                <div style={{ width: 38, height: 38, borderRadius: 8, background: sp.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: 'white' }}>{sp.abbr}</div>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: '#172b4d' }}>{sp.name}</div>
-                  <div style={{ fontSize: 11.5, color: '#97a0af', marginTop: 1 }}>Team-managed software</div>
+      {/* --- RECENT SPACES (SỬ DỤNG DATA THẬT) --- */}
+      {/* Chỉ hiển thị khối Không gian gần đây nếu mảng spaces có dữ liệu */}
+      {spaces && spaces.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} style={{ marginBottom: 36 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <h2 style={{ fontSize: 16, fontWeight: 800, color: '#172b4d', margin: 0 }}>Không gian gần đây</h2>
+          </div>
+          <div style={{ display: 'flex', gap: 16 }}>
+            {spaces.slice(0, 3).map((sp, i) => ( // Lấy tối đa 3 dự án hiển thị ở đây
+              <motion.div key={sp._id} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 + i * 0.08 }}
+                whileHover={{ y: -3, boxShadow: '0 8px 24px rgba(0,0,0,0.1)' }} onClick={() => setActiveSpace(sp)}
+                // Sửa activeSpace.id thành activeSpace?._id để so sánh
+                style={{ flex: 1, background: 'white', borderRadius: 10, border: activeSpace?._id === sp._id ? `2px solid ${sp.color}` : '1px solid #e8eaed', padding: '20px', cursor: 'pointer', transition: 'all 0.15s', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                  <div style={{ width: 38, height: 38, borderRadius: 8, background: sp.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: 'white' }}>{sp.abbr}</div>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#172b4d' }}>{sp.name}</div>
+                    <div style={{ fontSize: 11.5, color: '#97a0af', marginTop: 1 }}>Team-managed software</div>
+                  </div>
                 </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </motion.div>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+      )}
 
       {/* Tabs + Task list */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
@@ -65,7 +69,7 @@ const MainContent = ({ user, tasks, activeSpace, setActiveSpace, activeTab, setA
                       whileHover={{ backgroundColor: '#f0f4ff', x: 2 }}
                       style={{ display: 'flex', alignItems: 'center', padding: '10px 14px', borderRadius: 8, cursor: 'pointer', background: 'white', border: '1px solid #e8eaed', transition: 'all 0.12s', gap: 12 }}>
                       
-                      {/* --- THÊM onClick VÀO CHECKBOX --- */}
+                      {/* --- CHECKBOX --- */}
                       <div 
                         onClick={() => onToggleStatus(task._id, task.status)}
                         style={{ width: 20, height: 20, borderRadius: 4, border: `2px solid ${status.dot}`, background: task.status === 'DONE' ? status.dot : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, cursor: 'pointer' }}
@@ -80,16 +84,18 @@ const MainContent = ({ user, tasks, activeSpace, setActiveSpace, activeTab, setA
                         <span style={{ fontSize: 11, fontWeight: 700, color: status.color }}>{status.label}</span>
                       </div>
 
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); onEdit(task); }}
-                          title="Sửa công việc này"
-                          style={{ background: 'none', border: 'none', color: '#0052cc', cursor: 'pointer', padding: '4px 8px', borderRadius: 4, fontWeight: 600, fontSize: 12, opacity: 0.8 }}
-                          onMouseEnter={e => e.currentTarget.style.opacity = 1}
-                          onMouseLeave={e => e.currentTarget.style.opacity = 0.8}
-                        >
-                          Sửa
-                        </button>
+                      {/* --- NÚT SỬA --- */}
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); onEdit(task); }}
+                        title="Sửa công việc này"
+                        style={{ background: 'none', border: 'none', color: '#0052cc', cursor: 'pointer', padding: '4px 8px', borderRadius: 4, fontWeight: 600, fontSize: 12, opacity: 0.8 }}
+                        onMouseEnter={e => e.currentTarget.style.opacity = 1}
+                        onMouseLeave={e => e.currentTarget.style.opacity = 0.8}
+                      >
+                        Sửa
+                      </button>
                     
+                      {/* --- NÚT XOÁ --- */}
                       <button 
                         onClick={(e) => {
                           e.stopPropagation(); // Ngăn sự kiện click lan ra ngoài

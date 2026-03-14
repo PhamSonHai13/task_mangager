@@ -7,25 +7,25 @@ import Topbar from '../components/layout/Topbar';
 import MainContent from '../components/dashboard/MainContent';
 import RightPanel from '../components/dashboard/RightPanel';
 import CreateTaskModal from '../components/dashboard/CreateTaskModal';
-import EditTaskModal from '../components/dashboard/EditTaskModal'; // Nhớ import Edit Modal
-import { SPACES } from '../utils/constants';
+import EditTaskModal from '../components/dashboard/EditTaskModal'; 
+import CreateProjectModal from '../components/dashboard/CreateProjectModal'; 
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [tasks, setTasks] = useState([]);
+  const [spaces, setSpaces] = useState([]); 
   const [loading, setLoading] = useState(true);
   
-  // --- STATE QUẢN LÝ UI ---
   const [activeTab, setActiveTab] = useState('Worked on');
-  const [activeSpace, setActiveSpace] = useState(SPACES[0]);
+  const [activeSpace, setActiveSpace] = useState(null); 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
   
-  // --- STATE QUẢN LÝ MODAL (Lỗi của bạn nằm ở việc thiếu 2 dòng này) ---
-  const [isModalOpen, setIsModalOpen] = useState(false); // Modal Tạo mới
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false); // Modal Sửa
-  const [editingTask, setEditingTask] = useState(null); // Lưu data của task đang sửa
+  const [isModalOpen, setIsModalOpen] = useState(false); 
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false); 
+  const [isProjectModalOpen, setIsProjectModalOpen] = useState(false); 
+  const [editingTask, setEditingTask] = useState(null); 
 
   useEffect(() => {
     const userData = localStorage.getItem('user');
@@ -33,24 +33,32 @@ const Dashboard = () => {
     if (!token || !userData) { navigate('/login'); return; }
     
     setUser(JSON.parse(userData));
-    fetchTasks();
+    fetchData(); 
   }, [navigate]);
 
-  const fetchTasks = async () => {
+  const fetchData = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('/tasks', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const realTasks = response.data.map(t => ({
+      const headers = { Authorization: `Bearer ${token}` };
+
+      const [tasksRes, projectsRes] = await Promise.all([
+        axios.get('/tasks', { headers }),
+        axios.get('/projects', { headers })
+      ]);
+
+      setSpaces(projectsRes.data);
+      if (projectsRes.data.length > 0) {
+        setActiveSpace(projectsRes.data[0]); 
+      }
+
+      const realTasks = tasksRes.data.map(t => ({
         ...t,
         assignee: JSON.parse(localStorage.getItem('user'))?.name?.substring(0, 2).toUpperCase() || 'Me',
-        project: 'WR', 
         date: 'Hôm nay' 
       }));
       setTasks(realTasks);
     } catch (error) {
-      console.error("Lỗi lấy task:", error);
+      console.error("Lỗi lấy dữ liệu:", error);
     } finally {
       setLoading(false);
     }
@@ -103,21 +111,20 @@ const Dashboard = () => {
   return (
     <div style={{ display: 'flex', height: '100vh', width: '100vw', overflow: 'hidden', position: 'fixed', top: 0, left: 0, fontFamily: "'Segoe UI', system-ui, sans-serif", background: '#f4f5f7' }}>
       
-      {/* --- MODAL TẠO MỚI --- */}
+      {/* TRUYỀN activeSpace VÀO TRONG MODAL TẠO TASK */}
       <CreateTaskModal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
+        activeSpace={activeSpace}
         onTaskCreated={(newTask) => {
           setTasks([{
             ...newTask,
             assignee: user?.name?.substring(0, 2).toUpperCase(),
-            project: 'WR',
             date: 'Hôm nay'
           }, ...tasks]);
         }} 
       />
 
-      {/* --- MODAL SỬA TASK --- */}
       <EditTaskModal 
         isOpen={isEditModalOpen}
         onClose={() => { setIsEditModalOpen(false); setEditingTask(null); }}
@@ -125,18 +132,29 @@ const Dashboard = () => {
         onTaskUpdated={(updatedTask) => {
           setTasks(tasks.map(t => t._id === updatedTask._id ? {
             ...updatedTask,
-            assignee: t.assignee, project: t.project, date: t.date 
+            assignee: t.assignee, date: t.date 
           } : t));
         }}
+      />
+
+      <CreateProjectModal 
+        isOpen={isProjectModalOpen} 
+        onClose={() => setIsProjectModalOpen(false)} 
+        onProjectCreated={(newProject) => {
+          setSpaces([...spaces, newProject]); 
+          setActiveSpace(newProject);         
+        }} 
       />
 
       <Sidebar 
         sidebarCollapsed={sidebarCollapsed} 
         setSidebarCollapsed={setSidebarCollapsed} 
         user={user} 
+        spaces={spaces} 
         activeSpace={activeSpace} 
         setActiveSpace={setActiveSpace} 
         handleLogout={handleLogout} 
+        onOpenCreateProject={() => setIsProjectModalOpen(true)} 
       />
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
@@ -149,19 +167,30 @@ const Dashboard = () => {
         />
 
         <div style={{ flex: 1, overflowY: 'auto', display: 'flex', gap: 0 }}>
-          <MainContent 
-            user={user} 
-            tasks={tasks} 
-            activeSpace={activeSpace} 
-            setActiveSpace={setActiveSpace} 
-            activeTab={activeTab} 
-            setActiveTab={setActiveTab} 
-            onDelete={handleDeleteTask}
-            onToggleStatus={handleToggleStatus}
-            // Truyền hàm mở form Sửa xuống cho MainContent
-            onEdit={(task) => { setEditingTask(task); setIsEditModalOpen(true); }}
-          />
-          <RightPanel tasks={tasks} />
+          {/* LỌC DỮ LIỆU: Chỉ hiển thị nếu đã có activeSpace và task thuộc activeSpace đó */}
+          {!activeSpace ? (
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: '16px', fontWeight: 600 }}>
+              ← Vui lòng chọn hoặc tạo một Không gian làm việc
+            </div>
+          ) : (
+            <>
+              <MainContent 
+                user={user} 
+                // THUẬT TOÁN Ở ĐÂY: Filter các task có projectId khớp với _id của Không gian đang chọn
+                tasks={tasks.filter(t => t.project === activeSpace._id)} 
+                spaces={spaces}
+                activeSpace={activeSpace} 
+                setActiveSpace={setActiveSpace} 
+                activeTab={activeTab} 
+                setActiveTab={setActiveTab} 
+                onDelete={handleDeleteTask}
+                onToggleStatus={handleToggleStatus}
+                onEdit={(task) => { setEditingTask(task); setIsEditModalOpen(true); }}
+              />
+              {/* Thống kê cũng chỉ đếm các task của không gian hiện tại */}
+              <RightPanel tasks={tasks.filter(t => t.project === activeSpace._id)} />
+            </>
+          )}
         </div>
       </div>
 

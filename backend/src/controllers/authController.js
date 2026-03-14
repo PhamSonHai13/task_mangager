@@ -1,4 +1,6 @@
 const User = require('../models/user');
+const Workspace = require('../models/workspace');
+const WorkspaceMember = require('../models/workspacemember');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
@@ -17,6 +19,17 @@ exports.register = async (req, res) => {
       name,
       email,
       password: hashedPassword
+    });
+
+    const defaultWorkspace = await Workspace.create({
+      name: `Không gian của ${user.name}`,
+      owner: user._id
+    });
+
+    await WorkspaceMember.create({
+      workspace: defaultWorkspace._id,
+      user: user._id,
+      role: 'admin'
     });
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });

@@ -4,6 +4,8 @@ const cors = require('cors');
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/auth');
 const taskRoutes = require('./routes/task');
+const projectRoutes = require('./routes/project');
+const workspaceRoutes = require('./routes/workspace')
 
 const app = express();
 
@@ -15,6 +17,8 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use('/auth', authRoutes);
 app.use('/tasks', taskRoutes);
+app.use('/projects', projectRoutes);
+app.use('/workspaces', workspaceRoutes);
 
 const PORT = process.env.PORT || 5000;
 
