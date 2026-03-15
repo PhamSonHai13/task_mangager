@@ -23,7 +23,19 @@ exports.createTask = async (req, res) => {
 
 exports.getTasks = async (req, res) => {
   try {
-    const tasks = await Task.find({ createdBy: req.user.id }).sort({ createdAt: -1 });
+    const { workspaceId } = req.query;
+    let filter = {};
+    
+    if (workspaceId) {
+      filter.workspace = workspaceId; 
+    } else {
+      filter.createdBy = req.user.id;
+    }
+
+    const tasks = await Task.find(filter)
+      .populate('assignees', 'name email')
+      .sort({ createdAt: -1 });
+      
     res.status(200).json(tasks);
   } catch (error) {
     res.status(500).json({ error: error.message });

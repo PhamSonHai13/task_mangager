@@ -9,7 +9,6 @@ import RightPanel from '../components/dashboard/RightPanel';
 import CreateTaskModal from '../components/dashboard/CreateTaskModal';
 import EditTaskModal from '../components/dashboard/EditTaskModal'; 
 import CreateProjectModal from '../components/dashboard/CreateProjectModal'; 
-// Thêm context để lấy Workspace hiện tại
 import { useWorkspace } from '../context/WorkspaceContext';
 
 const Dashboard = () => {
@@ -19,7 +18,6 @@ const Dashboard = () => {
   const [spaces, setSpaces] = useState([]); 
   const [loading, setLoading] = useState(true);
   
-  // STATE MỚI ĐỂ CHỨA CÂY THƯ MỤC
   const [hierarchy, setHierarchy] = useState([]);
   const { activeWorkspace } = useWorkspace();
 
@@ -39,10 +37,8 @@ const Dashboard = () => {
     if (!token || !userData) { navigate('/login'); return; }
     
     setUser(JSON.parse(userData));
-    fetchData(); 
   }, [navigate]);
 
-  // EFFECT MỚI: Tự động gọi lấy cây thư mục khi có Workspace
   useEffect(() => {
     if (activeWorkspace) {
       const token = localStorage.getItem('token');
@@ -51,16 +47,20 @@ const Dashboard = () => {
       })
       .then(res => setHierarchy(res.data))
       .catch(err => console.error("Lỗi lấy hierarchy:", err));
+
+      fetchData();
     }
   }, [activeWorkspace]);
 
   const fetchData = async () => {
+    if (!activeWorkspace) return;
+
     try {
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
 
       const [tasksRes, projectsRes] = await Promise.all([
-        axios.get('/tasks', { headers }),
+        axios.get(`/tasks?workspaceId=${activeWorkspace._id}`, { headers }),
         axios.get('/projects', { headers })
       ]);
 
@@ -108,6 +108,21 @@ const Dashboard = () => {
       ));
     } catch (error) {
       console.error("Lỗi khi cập nhật trạng thái:", error);
+    }
+  };
+
+  // THÊM MỚI: Hàm phục vụ Kéo thả (Cập nhật sang Status bất kỳ)
+  const handleUpdateTaskStatus = async (taskId, newStatus) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(`/tasks/${taskId}`, { status: newStatus }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setTasks(tasks.map(task => 
+        task._id === taskId ? { ...task, status: newStatus } : task
+      ));
+    } catch (error) {
+      console.error("Lỗi khi kéo thả cập nhật trạng thái:", error);
     }
   };
 
@@ -160,7 +175,6 @@ const Dashboard = () => {
         onProjectCreated={(newProject) => {
           setSpaces([...spaces, newProject]); 
           setActiveSpace(newProject);        
-          // Load lại cây thư mục khi tạo mới
           const token = localStorage.getItem('token');
           if (activeWorkspace) axios.get(`/workspaces/${activeWorkspace._id}/hierarchy`, { headers: { Authorization: `Bearer ${token}` } }).then(res => setHierarchy(res.data));
         }} 
@@ -171,7 +185,7 @@ const Dashboard = () => {
         setSidebarCollapsed={setSidebarCollapsed} 
         user={user} 
         spaces={spaces} 
-        hierarchy={hierarchy} // TRUYỀN HIERARCHY XUỐNG SIDEBAR
+        hierarchy={hierarchy} 
         activeSpace={activeSpace} 
         setActiveSpace={setActiveSpace} 
         handleLogout={handleLogout} 
@@ -196,17 +210,18 @@ const Dashboard = () => {
             <>
               <MainContent 
                 user={user} 
-                tasks={tasks.filter(t => t.project === activeSpace._id || t.space === activeSpace._id || t.list === activeSpace._id)} 
-                spaces={spaces}
+                tasks={tasks.filter(t => t.project === activeSpace._id || t.space === activeSpace._id || t.folder === activeSpace._id || t.list === activeSpace._id)} 
+                spaces={hierarchy} 
                 activeSpace={activeSpace} 
                 setActiveSpace={setActiveSpace} 
                 activeTab={activeTab} 
                 setActiveTab={setActiveTab} 
                 onDelete={handleDeleteTask}
                 onToggleStatus={handleToggleStatus}
+                onUpdateStatus={handleUpdateTaskStatus} // TRUYỀN HÀM KÉO THẢ XUỐNG
                 onEdit={(task) => { setEditingTask(task); setIsEditModalOpen(true); }}
               />
-              <RightPanel tasks={tasks.filter(t => t.project === activeSpace._id || t.space === activeSpace._id || t.list === activeSpace._id)} />
+              <RightPanel tasks={tasks.filter(t => t.project === activeSpace._id || t.space === activeSpace._id || t.folder === activeSpace._id || t.list === activeSpace._id)} />
             </>
           )}
         </div>
