@@ -9,6 +9,8 @@ import RightPanel from '../components/dashboard/RightPanel';
 import CreateTaskModal from '../components/dashboard/CreateTaskModal';
 import EditTaskModal from '../components/dashboard/EditTaskModal'; 
 import CreateProjectModal from '../components/dashboard/CreateProjectModal'; 
+// Thêm context để lấy Workspace hiện tại
+import { useWorkspace } from '../context/WorkspaceContext';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -17,6 +19,10 @@ const Dashboard = () => {
   const [spaces, setSpaces] = useState([]); 
   const [loading, setLoading] = useState(true);
   
+  // STATE MỚI ĐỂ CHỨA CÂY THƯ MỤC
+  const [hierarchy, setHierarchy] = useState([]);
+  const { activeWorkspace } = useWorkspace();
+
   const [activeTab, setActiveTab] = useState('Worked on');
   const [activeSpace, setActiveSpace] = useState(null); 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -35,6 +41,18 @@ const Dashboard = () => {
     setUser(JSON.parse(userData));
     fetchData(); 
   }, [navigate]);
+
+  // EFFECT MỚI: Tự động gọi lấy cây thư mục khi có Workspace
+  useEffect(() => {
+    if (activeWorkspace) {
+      const token = localStorage.getItem('token');
+      axios.get(`/workspaces/${activeWorkspace._id}/hierarchy`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      .then(res => setHierarchy(res.data))
+      .catch(err => console.error("Lỗi lấy hierarchy:", err));
+    }
+  }, [activeWorkspace]);
 
   const fetchData = async () => {
     try {
@@ -111,7 +129,6 @@ const Dashboard = () => {
   return (
     <div style={{ display: 'flex', height: '100vh', width: '100vw', overflow: 'hidden', position: 'fixed', top: 0, left: 0, fontFamily: "'Segoe UI', system-ui, sans-serif", background: '#f4f5f7' }}>
       
-      {/* TRUYỀN activeSpace VÀO TRONG MODAL TẠO TASK */}
       <CreateTaskModal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
@@ -142,7 +159,10 @@ const Dashboard = () => {
         onClose={() => setIsProjectModalOpen(false)} 
         onProjectCreated={(newProject) => {
           setSpaces([...spaces, newProject]); 
-          setActiveSpace(newProject);         
+          setActiveSpace(newProject);        
+          // Load lại cây thư mục khi tạo mới
+          const token = localStorage.getItem('token');
+          if (activeWorkspace) axios.get(`/workspaces/${activeWorkspace._id}/hierarchy`, { headers: { Authorization: `Bearer ${token}` } }).then(res => setHierarchy(res.data));
         }} 
       />
 
@@ -151,6 +171,7 @@ const Dashboard = () => {
         setSidebarCollapsed={setSidebarCollapsed} 
         user={user} 
         spaces={spaces} 
+        hierarchy={hierarchy} // TRUYỀN HIERARCHY XUỐNG SIDEBAR
         activeSpace={activeSpace} 
         setActiveSpace={setActiveSpace} 
         handleLogout={handleLogout} 
@@ -167,7 +188,6 @@ const Dashboard = () => {
         />
 
         <div style={{ flex: 1, overflowY: 'auto', display: 'flex', gap: 0 }}>
-          {/* LỌC DỮ LIỆU: Chỉ hiển thị nếu đã có activeSpace và task thuộc activeSpace đó */}
           {!activeSpace ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: '16px', fontWeight: 600 }}>
               ← Vui lòng chọn hoặc tạo một Không gian làm việc
@@ -176,8 +196,7 @@ const Dashboard = () => {
             <>
               <MainContent 
                 user={user} 
-                // THUẬT TOÁN Ở ĐÂY: Filter các task có projectId khớp với _id của Không gian đang chọn
-                tasks={tasks.filter(t => t.project === activeSpace._id)} 
+                tasks={tasks.filter(t => t.project === activeSpace._id || t.space === activeSpace._id || t.list === activeSpace._id)} 
                 spaces={spaces}
                 activeSpace={activeSpace} 
                 setActiveSpace={setActiveSpace} 
@@ -187,8 +206,7 @@ const Dashboard = () => {
                 onToggleStatus={handleToggleStatus}
                 onEdit={(task) => { setEditingTask(task); setIsEditModalOpen(true); }}
               />
-              {/* Thống kê cũng chỉ đếm các task của không gian hiện tại */}
-              <RightPanel tasks={tasks.filter(t => t.project === activeSpace._id)} />
+              <RightPanel tasks={tasks.filter(t => t.project === activeSpace._id || t.space === activeSpace._id || t.list === activeSpace._id)} />
             </>
           )}
         </div>
