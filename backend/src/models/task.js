@@ -49,7 +49,20 @@ const taskSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'User',
     required: true 
-  }
+  },
+  attachments: [{
+    originalName: String, 
+    filename: String,     
+    path: String,         
+    mimetype: String,     
+    size: Number,         
+    uploadedAt: { type: Date, default: Date.now }
+  }],
+  comments: [{
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    content: String,
+    createdAt: { type: Date, default: Date.now }
+  }]
 }, { timestamps: true });
 
 module.exports = mongoose.model('Task', taskSchema);

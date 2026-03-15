@@ -6,6 +6,7 @@ import WorkspaceDropdown from './WorkspaceDropdown';
 import InviteMemberModal from './InviteMemberModal';
 import MembersModal from './MembersModal';
 import { useWorkspace } from '../../context/WorkspaceContext';
+import axios from '../../api/axios';
 
 const NAV_TOP = [
   { icon: <GridIcon />, label: 'Your work', active: false },
@@ -20,18 +21,101 @@ const Sidebar = ({ sidebarCollapsed, setSidebarCollapsed, user, spaces = [], hie
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [isMembersOpen, setIsMembersOpen] = useState(false);
   const { activeWorkspace } = useWorkspace();
-  
-  // STATE CHO MŨI TÊN MỞ RA MỞ VÀO CỦA CÂY THƯ MỤC
   const [expandedNodes, setExpandedNodes] = useState({});
+
+  // --- STATE CHO CHẾ ĐỘ SỬA TRỰC TIẾP ---
+  const [editingNode, setEditingNode] = useState(null);
+  const [editName, setEditName] = useState('');
 
   const toggleNode = (e, id) => {
     e.stopPropagation();
     setExpandedNodes(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
+  // --- HÀM BẬT Ô NHẬP LIỆU ---
+  const handleStartEdit = (e, id, currentName) => {
+    e.stopPropagation();
+    setEditingNode(id);
+    setEditName(currentName);
+  };
+
+  // --- HÀM LƯU TÊN MỚI ---
+  const handleSaveEdit = async (id, type) => {
+    if (!editName.trim() || editName === "") {
+      setEditingNode(null); // Tên trống thì hủy sửa
+      return;
+    }
+    try {
+      const token = localStorage.getItem('token');
+      const url = type === 'Không gian' ? `/workspaces/spaces/${id}` : type === 'Thư mục' ? `/workspaces/folders/${id}` : `/workspaces/lists/${id}`;
+      await axios.put(url, { name: editName }, { headers: { Authorization: `Bearer ${token}` } });
+      window.location.reload();
+    } catch (err) { alert("Lỗi khi đổi tên!"); }
+  };
+
+  // --- BẮT SỰ KIỆN BÀN PHÍM (ENTER ĐỂ LƯU, ESC ĐỂ HỦY) ---
+  const handleKeyDown = (e, id, type) => {
+    if (e.key === 'Enter') handleSaveEdit(id, type);
+    if (e.key === 'Escape') setEditingNode(null);
+  };
+
+  // --- HÀM XÓA ---
+  const handleDeleteItem = async (e, id, type) => {
+    e.stopPropagation(); 
+    if (!window.confirm(`Bạn có chắc muốn xóa ${type} này không? Hành động này sẽ xóa mọi dữ liệu bên trong!`)) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const url = type === 'Không gian' ? `/workspaces/spaces/${id}` : type === 'Thư mục' ? `/workspaces/folders/${id}` : `/workspaces/lists/${id}`;
+      await axios.delete(url, { headers: { Authorization: `Bearer ${token}` } });
+      window.location.reload(); 
+    } catch (err) { alert("Lỗi khi xóa!"); }
+  };
+
   const ChevronIcon = ({ isExpanded }) => (
     <svg style={{ transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s', flexShrink: 0 }} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M9 18l6-6-6-6"/></svg>
   );
+
+  // --- COMPONENT MENU 3 CHẤM CÓ HIỆU ỨNG ---
+  const ActionMenu = ({ id, name, type }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    return (
+      <div style={{ position: 'relative', marginLeft: 'auto' }} onClick={(e) => e.stopPropagation()} onMouseLeave={() => setIsOpen(false)}>
+        <button 
+          onClick={() => setIsOpen(!isOpen)} 
+          style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', padding: '4px', borderRadius: '4px', display: 'flex' }}
+          onMouseEnter={e => e.currentTarget.style.color = 'white'} 
+          onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.4)'}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+        </button>
+        
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: -5 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: -5 }} transition={{ duration: 0.15 }}
+              style={{ position: 'absolute', right: 0, top: '100%', background: '#2c333a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', padding: '4px', zIndex: 99, display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '110px', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}
+            >
+              <button 
+                onClick={(e) => { setIsOpen(false); handleStartEdit(e, id, name); }} 
+                style={{ textAlign: 'left', background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.85)', padding: '6px 8px', fontSize: '12px', cursor: 'pointer', borderRadius: '4px', display: 'flex', gap: '6px', alignItems: 'center' }} 
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                ✏️ Sửa tên
+              </button>
+              <button 
+                onClick={(e) => { setIsOpen(false); handleDeleteItem(e, id, type); }} 
+                style={{ textAlign: 'left', background: 'transparent', border: 'none', color: '#ff5630', padding: '6px 8px', fontSize: '12px', cursor: 'pointer', borderRadius: '4px', display: 'flex', gap: '6px', alignItems: 'center' }} 
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,86,48,0.1)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                🗑️ Xóa bỏ
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  };
 
   return (
     <>
@@ -104,10 +188,7 @@ const Sidebar = ({ sidebarCollapsed, setSidebarCollapsed, user, spaces = [], hie
           <AnimatePresence>
             {!sidebarCollapsed && (
               <motion.div 
-                initial={{ opacity: 0, height: 0 }} 
-                animate={{ opacity: 1, height: 'auto' }} 
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.25, ease: 'easeInOut' }}
+                initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.25, ease: 'easeInOut' }}
                 style={{ padding: '16px 8px 8px', overflow: 'hidden' }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, padding: '0 8px' }}>
@@ -122,7 +203,6 @@ const Sidebar = ({ sidebarCollapsed, setSidebarCollapsed, user, spaces = [], hie
                   </button>
                 </div>
 
-                {/* LOGIC CŨ LẪN MỚI GHÉP VÀO ĐÂY */}
                 {hierarchy && hierarchy.length > 0 ? (
                   hierarchy.map((space) => {
                     const isSpaceExpanded = expandedNodes[space._id];
@@ -134,7 +214,18 @@ const Sidebar = ({ sidebarCollapsed, setSidebarCollapsed, user, spaces = [], hie
                         <div onClick={() => setActiveSpace(space)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px', borderRadius: 6, cursor: 'pointer', background: isSpaceActive ? 'rgba(0,82,204,0.25)' : 'transparent', color: isSpaceActive ? 'white' : 'rgba(255,255,255,0.85)' }} onMouseEnter={e => { if(!isSpaceActive) e.currentTarget.style.background = 'rgba(255,255,255,0.06)' }} onMouseLeave={e => { if(!isSpaceActive) e.currentTarget.style.background = 'transparent' }}>
                           <div onClick={(e) => toggleNode(e, space._id)} style={{ padding: 4, display: 'flex', alignItems: 'center' }}><ChevronIcon isExpanded={isSpaceExpanded} /></div>
                           <div style={{ width: 22, height: 22, borderRadius: 4, background: space.color || '#0052cc', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: 'white' }}>{space.name.substring(0, 1).toUpperCase()}</div>
-                          <span style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{space.name}</span>
+                          
+                          {/* SỬA TRỰC TIẾP SPACE */}
+                          {editingNode === space._id ? (
+                            <input 
+                              autoFocus value={editName} onChange={e => setEditName(e.target.value)} onKeyDown={e => handleKeyDown(e, space._id, 'Không gian')} onBlur={() => setEditingNode(null)} onClick={e => e.stopPropagation()}
+                              style={{ flex: 1, background: '#1d2125', color: 'white', border: '1px solid #0052cc', borderRadius: 4, padding: '2px 6px', fontSize: 13, outline: 'none' }}
+                            />
+                          ) : (
+                            <span style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{space.name}</span>
+                          )}
+                          
+                          {editingNode !== space._id && <ActionMenu id={space._id} name={space.name} type="Không gian" />}
                         </div>
 
                         {/* FOLDERS & LISTS */}
@@ -148,7 +239,18 @@ const Sidebar = ({ sidebarCollapsed, setSidebarCollapsed, user, spaces = [], hie
                                   <div onClick={() => setActiveSpace(folder)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 4, cursor: 'pointer', background: isFolderActive ? 'rgba(255,255,255,0.1)' : 'transparent', color: isFolderActive ? 'white' : 'rgba(255,255,255,0.65)' }} onMouseEnter={e => { if(!isFolderActive) e.currentTarget.style.color = 'white' }} onMouseLeave={e => { if(!isFolderActive) e.currentTarget.style.color = 'rgba(255,255,255,0.65)' }}>
                                     <div onClick={(e) => toggleNode(e, folder._id)} style={{ display: 'flex', alignItems: 'center' }}><ChevronIcon isExpanded={isFolderExpanded} /></div>
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                                    <span style={{ fontSize: 12.5, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{folder.name}</span>
+                                    
+                                    {/* SỬA TRỰC TIẾP FOLDER */}
+                                    {editingNode === folder._id ? (
+                                      <input 
+                                        autoFocus value={editName} onChange={e => setEditName(e.target.value)} onKeyDown={e => handleKeyDown(e, folder._id, 'Thư mục')} onBlur={() => setEditingNode(null)} onClick={e => e.stopPropagation()}
+                                        style={{ flex: 1, background: '#1d2125', color: 'white', border: '1px solid #0052cc', borderRadius: 4, padding: '2px 6px', fontSize: 12.5, outline: 'none' }}
+                                      />
+                                    ) : (
+                                      <span style={{ fontSize: 12.5, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{folder.name}</span>
+                                    )}
+
+                                    {editingNode !== folder._id && <ActionMenu id={folder._id} name={folder.name} type="Thư mục" />}
                                   </div>
 
                                   {isFolderExpanded && (
@@ -158,7 +260,18 @@ const Sidebar = ({ sidebarCollapsed, setSidebarCollapsed, user, spaces = [], hie
                                         return (
                                           <div key={list._id} onClick={() => setActiveSpace(list)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 4, cursor: 'pointer', background: isListActive ? 'rgba(255,255,255,0.1)' : 'transparent', color: isListActive ? 'white' : 'rgba(255,255,255,0.55)' }} onMouseEnter={e => { if(!isListActive) e.currentTarget.style.color = 'white' }} onMouseLeave={e => { if(!isListActive) e.currentTarget.style.color = 'rgba(255,255,255,0.55)' }}>
                                             <div style={{ width: 6, height: 6, borderRadius: '50%', background: list.color || '#5e6c84' }} />
-                                            <span style={{ fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{list.name}</span>
+                                            
+                                            {/* SỬA TRỰC TIẾP LIST TRONG FOLDER */}
+                                            {editingNode === list._id ? (
+                                              <input 
+                                                autoFocus value={editName} onChange={e => setEditName(e.target.value)} onKeyDown={e => handleKeyDown(e, list._id, 'Danh sách')} onBlur={() => setEditingNode(null)} onClick={e => e.stopPropagation()}
+                                                style={{ flex: 1, background: '#1d2125', color: 'white', border: '1px solid #0052cc', borderRadius: 4, padding: '2px 6px', fontSize: 12, outline: 'none' }}
+                                              />
+                                            ) : (
+                                              <span style={{ fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{list.name}</span>
+                                            )}
+
+                                            {editingNode !== list._id && <ActionMenu id={list._id} name={list.name} type="Danh sách" />}
                                           </div>
                                         );
                                       })}
@@ -173,7 +286,18 @@ const Sidebar = ({ sidebarCollapsed, setSidebarCollapsed, user, spaces = [], hie
                               return (
                                 <div key={list._id} onClick={() => setActiveSpace(list)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 4, cursor: 'pointer', background: isListActive ? 'rgba(255,255,255,0.1)' : 'transparent', color: isListActive ? 'white' : 'rgba(255,255,255,0.55)' }} onMouseEnter={e => { if(!isListActive) e.currentTarget.style.color = 'white' }} onMouseLeave={e => { if(!isListActive) e.currentTarget.style.color = 'rgba(255,255,255,0.55)' }}>
                                   <div style={{ width: 6, height: 6, borderRadius: '50%', background: list.color || '#5e6c84' }} />
-                                  <span style={{ fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{list.name}</span>
+                                  
+                                  {/* SỬA TRỰC TIẾP LIST TRONG SPACE */}
+                                  {editingNode === list._id ? (
+                                    <input 
+                                      autoFocus value={editName} onChange={e => setEditName(e.target.value)} onKeyDown={e => handleKeyDown(e, list._id, 'Danh sách')} onBlur={() => setEditingNode(null)} onClick={e => e.stopPropagation()}
+                                      style={{ flex: 1, background: '#1d2125', color: 'white', border: '1px solid #0052cc', borderRadius: 4, padding: '2px 6px', fontSize: 12, outline: 'none' }}
+                                    />
+                                  ) : (
+                                    <span style={{ fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{list.name}</span>
+                                  )}
+
+                                  {editingNode !== list._id && <ActionMenu id={list._id} name={list.name} type="Danh sách" />}
                                 </div>
                               );
                             })}
@@ -215,10 +339,7 @@ const Sidebar = ({ sidebarCollapsed, setSidebarCollapsed, user, spaces = [], hie
             <AnimatePresence>
               {!sidebarCollapsed && (
                 <motion.div 
-                  initial={{ opacity: 0, x: -10 }} 
-                  animate={{ opacity: 1, x: 0 }} 
-                  exit={{ opacity: 0, x: -10 }} 
-                  transition={{ duration: 0.2 }}
+                  initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} transition={{ duration: 0.2 }}
                   style={{ flex: 1, overflow: 'hidden' }}
                 >
                   <div style={{ fontSize: 13, fontWeight: 600, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.name}</div>
@@ -237,20 +358,8 @@ const Sidebar = ({ sidebarCollapsed, setSidebarCollapsed, user, spaces = [], hie
         </div>
       </motion.div>
 
-      <InviteMemberModal
-        isOpen={isInviteOpen}
-        onClose={() => setIsInviteOpen(false)}
-        workspaceId={activeWorkspace?._id}
-      />
-      <MembersModal
-        isOpen={isMembersOpen}
-        onClose={() => setIsMembersOpen(false)}
-        workspaceId={activeWorkspace?._id}
-        onOpenInvite={() => {
-          setIsMembersOpen(false);
-          setIsInviteOpen(true);
-        }}
-      />
+      <InviteMemberModal isOpen={isInviteOpen} onClose={() => setIsInviteOpen(false)} workspaceId={activeWorkspace?._id} />
+      <MembersModal isOpen={isMembersOpen} onClose={() => setIsMembersOpen(false)} workspaceId={activeWorkspace?._id} onOpenInvite={() => { setIsMembersOpen(false); setIsInviteOpen(true); }} />
     </>
   );
 };

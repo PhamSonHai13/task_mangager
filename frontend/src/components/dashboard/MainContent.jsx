@@ -2,6 +2,7 @@ import { useState } from 'react'; // Bổ sung useState cho Kéo thả
 import { motion } from 'framer-motion';
 import { TABS, STATUS_CONFIG, PRIORITY_CONFIG, avatarColor } from '../../utils/constants';
 import { CheckIcon } from '../icons';
+import TaskDetailModal from './TaskDetailModal'; // Đảm bảo bác đã tạo file TaskDetailModal.jsx
 
 const getTaskLocation = (task, hierarchy) => {
   if (!hierarchy || hierarchy.length === 0) return '';
@@ -39,6 +40,9 @@ const MainContent = ({ user, tasks, spaces, activeSpace, setActiveSpace, activeT
   const todayTasks = tasks.filter(t => t.date === 'Hôm nay');
   const yesterdayTasks = tasks.filter(t => t.date === 'Hôm qua');
 
+  // --- STATE ĐỂ QUẢN LÝ VIỆC XEM CHI TIẾT ---
+  const [selectedTaskForDetail, setSelectedTaskForDetail] = useState(null);
+
   // --- LOGIC KÉO THẢ (DRAG & DROP) ---
   const [draggedTask, setDraggedTask] = useState(null);
 
@@ -54,7 +58,7 @@ const MainContent = ({ user, tasks, spaces, activeSpace, setActiveSpace, activeT
   };
 
   const handleDragOver = (e) => {
-    e.preventDefault(); // Cần có dòng này để cho phép thả (drop)
+    e.preventDefault(); 
     e.dataTransfer.dropEffect = 'move';
   };
 
@@ -116,7 +120,6 @@ const MainContent = ({ user, tasks, spaces, activeSpace, setActiveSpace, activeT
           ))}
         </div>
         
-        {/* --- BẢNG KANBAN BOARD 3 CỘT ĐƯỢC THAY THẾ CHO LIST DỌC CŨ --- */}
         <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start', minHeight: '500px' }}>
           {KANBAN_COLUMNS.map((col) => {
             const columnTasks = tasks.filter(t => t.status === col.id);
@@ -145,18 +148,19 @@ const MainContent = ({ user, tasks, spaces, activeSpace, setActiveSpace, activeT
                     return (
                       <motion.div 
                         key={task._id} 
-                        draggable // Bật tính năng kéo cho thẻ này
+                        draggable 
                         onDragStart={(e) => handleDragStart(e, task)}
                         onDragEnd={handleDragEnd}
+                        // --- CLICK VÀO THẺ ĐỂ HIỆN TRANG CHI TIẾT ---
+                        onClick={() => setSelectedTaskForDetail(task)} 
                         whileHover={{ y: -2, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}
-                        // Giữ nguyên thiết kế màu sắc, đường viền của bác, chỉ đổi sang flex dọc cho gọn
-                        style={{ display: 'flex', flexDirection: 'column', padding: '14px', borderRadius: 8, cursor: 'grab', background: 'white', border: '1px solid #e8eaed', transition: 'all 0.12s', gap: 10 }}
+                        style={{ display: 'flex', flexDirection: 'column', padding: '14px', borderRadius: 8, cursor: 'pointer', background: 'white', border: '1px solid #e8eaed', transition: 'all 0.12s', gap: 10 }}
                       >
                         
-                        {/* Hàng 1: Checkbox & Tên Task & Đường dẫn */}
+                        {/* Hàng 1: Checkbox & Tên Task & Đường dẫn & NGÀY THÁNG */}
                         <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
                           <div 
-                            onClick={() => onToggleStatus(task._id, task.status)}
+                            onClick={(e) => { e.stopPropagation(); onToggleStatus(task._id, task.status); }} 
                             style={{ width: 20, height: 20, borderRadius: 4, border: `2px solid ${status.dot}`, background: task.status === 'DONE' ? status.dot : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, cursor: 'pointer', marginTop: 2 }}
                           >
                             {task.status === 'DONE' && <span style={{ color: 'white', fontSize: 9 }}><CheckIcon /></span>}
@@ -166,12 +170,26 @@ const MainContent = ({ user, tasks, spaces, activeSpace, setActiveSpace, activeT
                             <span style={{ fontSize: 13.5, color: task.status === 'DONE' ? '#97a0af' : '#172b4d', fontWeight: 500, textDecoration: task.status === 'DONE' ? 'line-through' : 'none', lineHeight: '1.4' }}>
                               {task.title}
                             </span>
-                            {locationPath && (
-                              <span style={{ fontSize: 11, color: '#8993a4', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
-                                {locationPath}
+                            
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+                              {locationPath && (
+                                <span style={{ fontSize: 11, color: '#8993a4', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                                  {locationPath}
+                                </span>
+                              )}
+                              
+                              <span style={{ fontSize: 11, color: task.status === 'DONE' ? '#8993a4' : '#d97008', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                {task.dueDate ? new Date(task.dueDate).toLocaleDateString('vi-VN') : task.date}
                               </span>
-                            )}
+
+                              {task.attachments && task.attachments.length > 0 && (
+                                <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4, background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px' }}>
+                                  📎 {task.attachments.length}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                         
@@ -190,13 +208,14 @@ const MainContent = ({ user, tasks, spaces, activeSpace, setActiveSpace, activeT
                           </div>
 
                           <div style={{ display: 'flex', gap: 4 }}>
+                            {/* NÚT SỬA ĐỂ HIỆN TRANG FORM (YÊU CẦU CỦA BÁC) */}
                             <button 
                               onClick={(e) => { e.stopPropagation(); onEdit(task); }}
                               title="Sửa" style={{ background: 'none', border: 'none', color: '#0052cc', cursor: 'pointer', padding: '4px', borderRadius: 4, fontWeight: 600, fontSize: 12, opacity: 0.7 }}
                               onMouseEnter={e => e.currentTarget.style.opacity = 1} onMouseLeave={e => e.currentTarget.style.opacity = 0.7}
                             >Sửa</button>
                             <button 
-                              onClick={(e) => { e.stopPropagation(); onDelete(task._id); }}
+                              onClick={(e) => { e.stopPropagation(); onDelete(task._id); }} 
                               title="Xóa" style={{ background: 'none', border: 'none', color: '#ff5630', cursor: 'pointer', padding: '4px', borderRadius: 4, fontWeight: 600, fontSize: 12, opacity: 0.7 }}
                               onMouseEnter={e => e.currentTarget.style.opacity = 1} onMouseLeave={e => e.currentTarget.style.opacity = 0.7}
                             >Xoá</button>
@@ -211,6 +230,13 @@ const MainContent = ({ user, tasks, spaces, activeSpace, setActiveSpace, activeT
             );
           })}
         </div>
+
+        {/* --- MODAL CHI TIẾT CÔNG VIỆC CHỜ SẴN --- */}
+        <TaskDetailModal 
+          isOpen={!!selectedTaskForDetail} 
+          onClose={() => setSelectedTaskForDetail(null)} 
+          task={selectedTaskForDetail} 
+        />
 
       </motion.div>
     </div>
