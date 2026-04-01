@@ -23,7 +23,6 @@ const Sidebar = ({ sidebarCollapsed, setSidebarCollapsed, user, spaces = [], hie
   const { activeWorkspace } = useWorkspace();
   const [expandedNodes, setExpandedNodes] = useState({});
 
-  // --- STATE CHO CHẾ ĐỘ SỬA TRỰC TIẾP ---
   const [editingNode, setEditingNode] = useState(null);
   const [editName, setEditName] = useState('');
 
@@ -32,17 +31,15 @@ const Sidebar = ({ sidebarCollapsed, setSidebarCollapsed, user, spaces = [], hie
     setExpandedNodes(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  // --- HÀM BẬT Ô NHẬP LIỆU ---
   const handleStartEdit = (e, id, currentName) => {
     e.stopPropagation();
     setEditingNode(id);
     setEditName(currentName);
   };
 
-  // --- HÀM LƯU TÊN MỚI ---
   const handleSaveEdit = async (id, type) => {
     if (!editName.trim() || editName === "") {
-      setEditingNode(null); // Tên trống thì hủy sửa
+      setEditingNode(null); 
       return;
     }
     try {
@@ -53,13 +50,11 @@ const Sidebar = ({ sidebarCollapsed, setSidebarCollapsed, user, spaces = [], hie
     } catch (err) { alert("Lỗi khi đổi tên!"); }
   };
 
-  // --- BẮT SỰ KIỆN BÀN PHÍM (ENTER ĐỂ LƯU, ESC ĐỂ HỦY) ---
   const handleKeyDown = (e, id, type) => {
     if (e.key === 'Enter') handleSaveEdit(id, type);
     if (e.key === 'Escape') setEditingNode(null);
   };
 
-  // --- HÀM XÓA ---
   const handleDeleteItem = async (e, id, type) => {
     e.stopPropagation(); 
     if (!window.confirm(`Bạn có chắc muốn xóa ${type} này không? Hành động này sẽ xóa mọi dữ liệu bên trong!`)) return;
@@ -76,11 +71,10 @@ const Sidebar = ({ sidebarCollapsed, setSidebarCollapsed, user, spaces = [], hie
     <svg style={{ transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s', flexShrink: 0 }} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M9 18l6-6-6-6"/></svg>
   );
 
-  // --- COMPONENT MENU 3 CHẤM CÓ HIỆU ỨNG ---
   const ActionMenu = ({ id, name, type }) => {
     const [isOpen, setIsOpen] = useState(false);
     return (
-      <div style={{ position: 'relative', marginLeft: 'auto' }} onClick={(e) => e.stopPropagation()} onMouseLeave={() => setIsOpen(false)}>
+      <div style={{ position: 'relative', marginLeft: 'auto', flexShrink: 0 }} onClick={(e) => e.stopPropagation()} onMouseLeave={() => setIsOpen(false)}>
         <button 
           onClick={() => setIsOpen(!isOpen)} 
           style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', padding: '4px', borderRadius: '4px', display: 'flex' }}
@@ -94,18 +88,18 @@ const Sidebar = ({ sidebarCollapsed, setSidebarCollapsed, user, spaces = [], hie
           {isOpen && (
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: -5 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: -5 }} transition={{ duration: 0.15 }}
-              style={{ position: 'absolute', right: 0, top: '100%', background: '#2c333a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', padding: '4px', zIndex: 99, display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '110px', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}
+              style={{ position: 'absolute', right: 0, top: '100%', background: '#2c333a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', padding: '4px', zIndex: 99, display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '100px', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}
             >
               <button 
                 onClick={(e) => { setIsOpen(false); handleStartEdit(e, id, name); }} 
-                style={{ textAlign: 'left', background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.85)', padding: '6px 8px', fontSize: '12px', cursor: 'pointer', borderRadius: '4px', display: 'flex', gap: '6px', alignItems: 'center' }} 
+                style={{ textAlign: 'left', background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.85)', padding: '6px 8px', fontSize: '12px', cursor: 'pointer', borderRadius: '4px', display: 'flex', gap: '6px', alignItems: 'center', whiteSpace: 'nowrap' }} 
                 onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               >
                 ✏️ Sửa tên
               </button>
               <button 
                 onClick={(e) => { setIsOpen(false); handleDeleteItem(e, id, type); }} 
-                style={{ textAlign: 'left', background: 'transparent', border: 'none', color: '#ff5630', padding: '6px 8px', fontSize: '12px', cursor: 'pointer', borderRadius: '4px', display: 'flex', gap: '6px', alignItems: 'center' }} 
+                style={{ textAlign: 'left', background: 'transparent', border: 'none', color: '#ff5630', padding: '6px 8px', fontSize: '12px', cursor: 'pointer', borderRadius: '4px', display: 'flex', gap: '6px', alignItems: 'center', whiteSpace: 'nowrap' }} 
                 onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,86,48,0.1)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               >
                 🗑️ Xóa bỏ
@@ -116,6 +110,9 @@ const Sidebar = ({ sidebarCollapsed, setSidebarCollapsed, user, spaces = [], hie
       </div>
     );
   };
+
+  const safeHierarchy = hierarchy || [];
+  const safeSpaces = spaces || [];
 
   return (
     <>
@@ -172,10 +169,7 @@ const Sidebar = ({ sidebarCollapsed, setSidebarCollapsed, user, spaces = [], hie
               <AnimatePresence>
                 {!sidebarCollapsed && (
                   <motion.span 
-                    initial={{ opacity: 0, x: -10 }} 
-                    animate={{ opacity: 1, x: 0 }} 
-                    exit={{ opacity: 0, x: -10 }} 
-                    transition={{ duration: 0.2 }}
+                    initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} transition={{ duration: 0.2 }}
                     style={{ fontSize: 13.5, fontWeight: 500, whiteSpace: 'nowrap' }}
                   >
                     {item.label}
@@ -203,8 +197,8 @@ const Sidebar = ({ sidebarCollapsed, setSidebarCollapsed, user, spaces = [], hie
                   </button>
                 </div>
 
-                {hierarchy && hierarchy.length > 0 ? (
-                  hierarchy.map((space) => {
+                {safeHierarchy.length > 0 ? (
+                  safeHierarchy.filter(s => s && s._id).map((space) => {
                     const isSpaceExpanded = expandedNodes[space._id];
                     const isSpaceActive = activeSpace?._id === space._id;
                     
@@ -212,42 +206,42 @@ const Sidebar = ({ sidebarCollapsed, setSidebarCollapsed, user, spaces = [], hie
                       <div key={space._id}>
                         {/* THE SPACE ROW */}
                         <div onClick={() => setActiveSpace(space)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px', borderRadius: 6, cursor: 'pointer', background: isSpaceActive ? 'rgba(0,82,204,0.25)' : 'transparent', color: isSpaceActive ? 'white' : 'rgba(255,255,255,0.85)' }} onMouseEnter={e => { if(!isSpaceActive) e.currentTarget.style.background = 'rgba(255,255,255,0.06)' }} onMouseLeave={e => { if(!isSpaceActive) e.currentTarget.style.background = 'transparent' }}>
-                          <div onClick={(e) => toggleNode(e, space._id)} style={{ padding: 4, display: 'flex', alignItems: 'center' }}><ChevronIcon isExpanded={isSpaceExpanded} /></div>
-                          <div style={{ width: 22, height: 22, borderRadius: 4, background: space.color || '#0052cc', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: 'white' }}>{space.name.substring(0, 1).toUpperCase()}</div>
+                          <div onClick={(e) => toggleNode(e, space._id)} style={{ padding: 4, display: 'flex', alignItems: 'center', flexShrink: 0 }}><ChevronIcon isExpanded={isSpaceExpanded} /></div>
+                          <div style={{ width: 22, height: 22, borderRadius: 4, background: space.color || '#0052cc', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: 'white', flexShrink: 0 }}>{space.name?.substring(0, 1).toUpperCase()}</div>
                           
-                          {/* SỬA TRỰC TIẾP SPACE */}
+                          {/* SỬA TRỰC TIẾP SPACE - Đã thêm minWidth: 0 */}
                           {editingNode === space._id ? (
                             <input 
                               autoFocus value={editName} onChange={e => setEditName(e.target.value)} onKeyDown={e => handleKeyDown(e, space._id, 'Không gian')} onBlur={() => setEditingNode(null)} onClick={e => e.stopPropagation()}
-                              style={{ flex: 1, background: '#1d2125', color: 'white', border: '1px solid #0052cc', borderRadius: 4, padding: '2px 6px', fontSize: 13, outline: 'none' }}
+                              style={{ flex: 1, minWidth: 0, width: '100%', background: '#1d2125', color: 'white', border: '1px solid #0052cc', borderRadius: 4, padding: '2px 6px', fontSize: 13, outline: 'none' }}
                             />
                           ) : (
-                            <span style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{space.name}</span>
+                            <span style={{ flex: 1, fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{space.name}</span>
                           )}
                           
                           {editingNode !== space._id && <ActionMenu id={space._id} name={space.name} type="Không gian" />}
                         </div>
 
-                        {/* FOLDERS & LISTS */}
+                        {/* FOLDERS & LISTS BẢO VỆ AN TOÀN */}
                         {isSpaceExpanded && (
                           <div style={{ paddingLeft: 12, marginLeft: 12, borderLeft: '1px solid rgba(255,255,255,0.1)', marginTop: 4 }}>
-                            {space.folders.map(folder => {
+                            {(space.folders || []).filter(f => f && f._id).map(folder => {
                               const isFolderExpanded = expandedNodes[folder._id];
                               const isFolderActive = activeSpace?._id === folder._id;
                               return (
                                 <div key={folder._id}>
                                   <div onClick={() => setActiveSpace(folder)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 4, cursor: 'pointer', background: isFolderActive ? 'rgba(255,255,255,0.1)' : 'transparent', color: isFolderActive ? 'white' : 'rgba(255,255,255,0.65)' }} onMouseEnter={e => { if(!isFolderActive) e.currentTarget.style.color = 'white' }} onMouseLeave={e => { if(!isFolderActive) e.currentTarget.style.color = 'rgba(255,255,255,0.65)' }}>
-                                    <div onClick={(e) => toggleNode(e, folder._id)} style={{ display: 'flex', alignItems: 'center' }}><ChevronIcon isExpanded={isFolderExpanded} /></div>
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                                    <div onClick={(e) => toggleNode(e, folder._id)} style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}><ChevronIcon isExpanded={isFolderExpanded} /></div>
+                                    <svg style={{ flexShrink: 0 }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
                                     
-                                    {/* SỬA TRỰC TIẾP FOLDER */}
+                                    {/* SỬA TRỰC TIẾP FOLDER - Đã thêm minWidth: 0 */}
                                     {editingNode === folder._id ? (
                                       <input 
                                         autoFocus value={editName} onChange={e => setEditName(e.target.value)} onKeyDown={e => handleKeyDown(e, folder._id, 'Thư mục')} onBlur={() => setEditingNode(null)} onClick={e => e.stopPropagation()}
-                                        style={{ flex: 1, background: '#1d2125', color: 'white', border: '1px solid #0052cc', borderRadius: 4, padding: '2px 6px', fontSize: 12.5, outline: 'none' }}
+                                        style={{ flex: 1, minWidth: 0, width: '100%', background: '#1d2125', color: 'white', border: '1px solid #0052cc', borderRadius: 4, padding: '2px 6px', fontSize: 12.5, outline: 'none' }}
                                       />
                                     ) : (
-                                      <span style={{ fontSize: 12.5, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{folder.name}</span>
+                                      <span style={{ flex: 1, fontSize: 12.5, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{folder.name}</span>
                                     )}
 
                                     {editingNode !== folder._id && <ActionMenu id={folder._id} name={folder.name} type="Thư mục" />}
@@ -255,20 +249,20 @@ const Sidebar = ({ sidebarCollapsed, setSidebarCollapsed, user, spaces = [], hie
 
                                   {isFolderExpanded && (
                                     <div style={{ paddingLeft: 22, marginTop: 2 }}>
-                                      {folder.lists.map(list => {
+                                      {(folder.lists || []).filter(l => l && l._id).map(list => {
                                         const isListActive = activeSpace?._id === list._id;
                                         return (
                                           <div key={list._id} onClick={() => setActiveSpace(list)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 4, cursor: 'pointer', background: isListActive ? 'rgba(255,255,255,0.1)' : 'transparent', color: isListActive ? 'white' : 'rgba(255,255,255,0.55)' }} onMouseEnter={e => { if(!isListActive) e.currentTarget.style.color = 'white' }} onMouseLeave={e => { if(!isListActive) e.currentTarget.style.color = 'rgba(255,255,255,0.55)' }}>
-                                            <div style={{ width: 6, height: 6, borderRadius: '50%', background: list.color || '#5e6c84' }} />
+                                            <div style={{ width: 6, height: 6, borderRadius: '50%', background: list.color || '#5e6c84', flexShrink: 0 }} />
                                             
-                                            {/* SỬA TRỰC TIẾP LIST TRONG FOLDER */}
+                                            {/* SỬA TRỰC TIẾP LIST - Đã thêm minWidth: 0 */}
                                             {editingNode === list._id ? (
                                               <input 
                                                 autoFocus value={editName} onChange={e => setEditName(e.target.value)} onKeyDown={e => handleKeyDown(e, list._id, 'Danh sách')} onBlur={() => setEditingNode(null)} onClick={e => e.stopPropagation()}
-                                                style={{ flex: 1, background: '#1d2125', color: 'white', border: '1px solid #0052cc', borderRadius: 4, padding: '2px 6px', fontSize: 12, outline: 'none' }}
+                                                style={{ flex: 1, minWidth: 0, width: '100%', background: '#1d2125', color: 'white', border: '1px solid #0052cc', borderRadius: 4, padding: '2px 6px', fontSize: 12, outline: 'none' }}
                                               />
                                             ) : (
-                                              <span style={{ fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{list.name}</span>
+                                              <span style={{ flex: 1, fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{list.name}</span>
                                             )}
 
                                             {editingNode !== list._id && <ActionMenu id={list._id} name={list.name} type="Danh sách" />}
@@ -281,20 +275,20 @@ const Sidebar = ({ sidebarCollapsed, setSidebarCollapsed, user, spaces = [], hie
                               );
                             })}
 
-                            {space.lists.map(list => {
+                            {(space.lists || []).filter(l => l && l._id).map(list => {
                               const isListActive = activeSpace?._id === list._id;
                               return (
                                 <div key={list._id} onClick={() => setActiveSpace(list)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 4, cursor: 'pointer', background: isListActive ? 'rgba(255,255,255,0.1)' : 'transparent', color: isListActive ? 'white' : 'rgba(255,255,255,0.55)' }} onMouseEnter={e => { if(!isListActive) e.currentTarget.style.color = 'white' }} onMouseLeave={e => { if(!isListActive) e.currentTarget.style.color = 'rgba(255,255,255,0.55)' }}>
-                                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: list.color || '#5e6c84' }} />
+                                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: list.color || '#5e6c84', flexShrink: 0 }} />
                                   
-                                  {/* SỬA TRỰC TIẾP LIST TRONG SPACE */}
+                                  {/* SỬA TRỰC TIẾP LIST - Đã thêm minWidth: 0 */}
                                   {editingNode === list._id ? (
                                     <input 
                                       autoFocus value={editName} onChange={e => setEditName(e.target.value)} onKeyDown={e => handleKeyDown(e, list._id, 'Danh sách')} onBlur={() => setEditingNode(null)} onClick={e => e.stopPropagation()}
-                                      style={{ flex: 1, background: '#1d2125', color: 'white', border: '1px solid #0052cc', borderRadius: 4, padding: '2px 6px', fontSize: 12, outline: 'none' }}
+                                      style={{ flex: 1, minWidth: 0, width: '100%', background: '#1d2125', color: 'white', border: '1px solid #0052cc', borderRadius: 4, padding: '2px 6px', fontSize: 12, outline: 'none' }}
                                     />
                                   ) : (
-                                    <span style={{ fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{list.name}</span>
+                                    <span style={{ flex: 1, fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{list.name}</span>
                                   )}
 
                                   {editingNode !== list._id && <ActionMenu id={list._id} name={list.name} type="Danh sách" />}
@@ -306,12 +300,12 @@ const Sidebar = ({ sidebarCollapsed, setSidebarCollapsed, user, spaces = [], hie
                       </div>
                     );
                   })
-                ) : spaces.length === 0 ? (
+                ) : safeSpaces.length === 0 ? (
                   <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', padding: '10px 0', fontStyle: 'italic' }}>
                     Chưa có dự án nào.
                   </div>
                 ) : (
-                  spaces.map((sp) => (
+                  safeSpaces.filter(sp => sp && sp._id).map((sp) => (
                     <motion.div key={sp._id} whileHover={{ x: 2 }} onClick={() => setActiveSpace(sp)}
                       style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 6, cursor: 'pointer', marginBottom: 2, background: activeSpace?._id === sp._id ? 'rgba(0,82,204,0.25)' : 'transparent', border: activeSpace?._id === sp._id ? '1px solid rgba(0,82,204,0.4)' : '1px solid transparent', transition: 'all 0.15s' }}
                       onMouseEnter={e => { if (activeSpace?._id !== sp._id) e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
