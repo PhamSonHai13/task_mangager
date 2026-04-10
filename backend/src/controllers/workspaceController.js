@@ -29,7 +29,7 @@ exports.createWorkspace = async (req, res) => {
   }
 };
 
-// --- QUẢN LÝ THÀNH VIÊN ---
+
 
 exports.addMember = async (req, res) => {
   try {
@@ -69,7 +69,6 @@ exports.removeMember = async (req, res) => {
   }
 };
 
-// --- QUẢN LÝ HIERARCHY (SPACE > FOLDER > LIST) ---
 
 exports.getWorkspaceHierarchy = async (req, res) => {
   try {
@@ -98,7 +97,7 @@ exports.getWorkspaceHierarchy = async (req, res) => {
   }
 };
 
-// --- CREATE ---
+
 
 exports.createSpace = async (req, res) => {
   try {
@@ -144,7 +143,7 @@ exports.updateList = async (req, res) => {
   } catch (error) { res.status(500).json({ error: error.message }); }
 };
 
-// --- DELETE (CASCADE DELETE - XÓA TẬN GỐC) ---
+
 
 exports.deleteSpace = async (req, res) => {
   try {
@@ -152,7 +151,7 @@ exports.deleteSpace = async (req, res) => {
     await Space.findByIdAndDelete(id);
     await Folder.deleteMany({ space: id });
     await List.deleteMany({ space: id }); 
-    await Task.deleteMany({ project: id }); // Giả định field project trong Task trỏ tới Space
+    await Task.deleteMany({ project: id }); 
     res.status(200).json({ message: 'Đã xóa Không gian và dữ liệu liên quan!' });
   } catch (error) { res.status(500).json({ error: error.message }); }
 };

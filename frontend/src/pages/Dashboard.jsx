@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import axios from '../api/axios';
 import Sidebar from '../components/layout/Sidebar';
 import Topbar from '../components/layout/Topbar';
@@ -41,6 +41,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (activeWorkspace) {
+      setLoading(true); // Bật loading khi bắt đầu tải Workspace mới
       const token = localStorage.getItem('token');
       axios.get(`/workspaces/${activeWorkspace._id}/hierarchy`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -49,11 +50,20 @@ const Dashboard = () => {
       .catch(err => console.error("Lỗi lấy hierarchy:", err));
 
       fetchData();
+    } else {
+      // FIX LỖI TREO TRANG CHÍNH Ở ĐÂY:
+      // Nếu không có Workspace (acc mới) thì sau nửa giây phải tự động tắt vòng xoay loading
+      const timer = setTimeout(() => setLoading(false), 500);
+      return () => clearTimeout(timer);
     }
   }, [activeWorkspace]);
 
   const fetchData = async () => {
-    if (!activeWorkspace) return;
+    // Nếu không có activeWorkspace thì thoát ra và nhớ tắt loading
+    if (!activeWorkspace) {
+      setLoading(false);
+      return;
+    }
 
     try {
       const token = localStorage.getItem('token');
@@ -78,6 +88,7 @@ const Dashboard = () => {
     } catch (error) {
       console.error("Lỗi lấy dữ liệu:", error);
     } finally {
+      // Đảm bảo luôn luôn tắt loading dù API gọi thành công hay thất bại
       setLoading(false);
     }
   };
@@ -111,7 +122,6 @@ const Dashboard = () => {
     }
   };
 
-  // THÊM MỚI: Hàm phục vụ Kéo thả (Cập nhật sang Status bất kỳ)
   const handleUpdateTaskStatus = async (taskId, newStatus) => {
     try {
       const token = localStorage.getItem('token');
@@ -129,7 +139,8 @@ const Dashboard = () => {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    navigate('/login');
+    // FIX LỖI HỒN MA BÓNG QUẾ: Ép tải lại toàn bộ trang web để reset sạch bộ nhớ RAM của React
+    window.location.href = '/login';
   };
 
   if (loading) return (
@@ -157,6 +168,7 @@ const Dashboard = () => {
         }} 
       />
 
+      {/* FORM SỬA NHẬP LIỆU NHƯ BÁC YÊU CẦU */}
       <EditTaskModal 
         isOpen={isEditModalOpen}
         onClose={() => { setIsEditModalOpen(false); setEditingTask(null); }}
@@ -204,7 +216,7 @@ const Dashboard = () => {
         <div style={{ flex: 1, overflowY: 'auto', display: 'flex', gap: 0 }}>
           {!activeSpace ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: '16px', fontWeight: 600 }}>
-              ← Vui lòng chọn hoặc tạo một Không gian làm việc
+              ← Vui lòng chọn hoặc tạo một Dự án (Không gian làm việc)
             </div>
           ) : (
             <>
@@ -218,7 +230,8 @@ const Dashboard = () => {
                 setActiveTab={setActiveTab} 
                 onDelete={handleDeleteTask}
                 onToggleStatus={handleToggleStatus}
-                onUpdateStatus={handleUpdateTaskStatus} // TRUYỀN HÀM KÉO THẢ XUỐNG
+                onUpdateStatus={handleUpdateTaskStatus} 
+                // GẮN SỰ KIỆN MỞ TRANG SỬA (FORM)
                 onEdit={(task) => { setEditingTask(task); setIsEditModalOpen(true); }}
               />
               <RightPanel tasks={tasks.filter(t => t.project === activeSpace._id || t.space === activeSpace._id || t.folder === activeSpace._id || t.list === activeSpace._id)} />

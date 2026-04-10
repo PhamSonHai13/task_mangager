@@ -9,13 +9,30 @@ export const WorkspaceProvider = ({ children }) => {
 
   const fetchWorkspaces = async () => {
     try {
-      const res = await axios.get('/workspaces');
+      // Lấy token từ Local Storage
+      const token = localStorage.getItem('token');
+      
+      // Gắn token vào header để Backend nhận diện
+      const res = await axios.get('/workspaces', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      
       setWorkspaces(res.data);
+      // Nếu có workspace và chưa chọn cái nào thì tự động chọn cái đầu tiên
       if (res.data.length > 0 && !activeWorkspace) {
         setActiveWorkspace(res.data[0]);
       }
     } catch (error) {
-      console.error(error);
+      console.error("Lỗi khi tải Workspace:", error);
+      
+      // BẢO MẬT: Nếu Backend báo lỗi 401 (Không có quyền/Hết hạn token)
+      // thì xóa token cũ đi và bắt người dùng đăng nhập lại
+      if (error.response && error.response.status === 401) {
+        localStorage.removeItem('token');
+        window.location.href = '/login'; 
+      }
     }
   };
 

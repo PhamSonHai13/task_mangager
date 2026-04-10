@@ -13,46 +13,47 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
   const [folderId, setFolderId] = useState('');
   const [hierarchy, setHierarchy] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [focusInput, setFocusInput] = useState(false);
 
   useEffect(() => {
-    if (isOpen && activeWorkspace) {
+    if (isOpen && activeWorkspace?._id) {
       const token = localStorage.getItem('token');
       axios.get(`/workspaces/${activeWorkspace._id}/hierarchy`, {
         headers: { Authorization: `Bearer ${token}` }
       })
       .then(res => {
-        setHierarchy(res.data);
-        if (res.data.length > 0) {
+        setHierarchy(res.data || []);
+        if (res.data && res.data.length > 0) {
           setSpaceId(res.data[0]._id);
         }
       })
-      .catch(err => console.error(err));
+      .catch(err => {
+          console.error("Error fetching hierarchy:", err);
+          setHierarchy([]);
+      });
     }
   }, [isOpen, activeWorkspace]);
 
-  const handleNameChange = (e) => {
-    const name = e.target.value;
-    const words = name.trim().split(/\s+/);
-    let abbr = '';
-    if (words.length >= 2) {
-      abbr = (words[0][0] + words[1][0]).toUpperCase();
-    } else if (words.length === 1 && words[0].length >= 2) {
-      abbr = words[0].substring(0, 2).toUpperCase();
-    } else {
-      abbr = name.toUpperCase();
-    }
-    setFormData({ ...formData, name, abbr: abbr.substring(0, 2) });
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Vẫn bảo vệ khi ấn Lưu (Submit)
+    if (!activeWorkspace || !activeWorkspace._id) {
+      alert("⚠️ Vui lòng tạo hoặc chọn Không gian làm việc (Workspace) từ Menu thả xuống ở góc trên bên trái trước khi lưu Dự án!");
+      return;
+    }
+
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
+      
+      const finalAbbr = formData.abbr.trim() !== '' 
+        ? formData.abbr 
+        : formData.name.substring(0, 2).toUpperCase();
+
       const basePayload = { 
         name: formData.name, 
+        abbr: finalAbbr,
         color: formData.color, 
         workspaceId: activeWorkspace._id 
       };
@@ -77,7 +78,7 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
 
   if (!isOpen) return null;
 
-  const selectedSpace = hierarchy.find(s => s._id === spaceId);
+  const selectedSpace = (hierarchy || []).find(s => s._id === spaceId);
 
   return (
     <AnimatePresence>
@@ -87,13 +88,13 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
           
           <div style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#0f172a' }}>Thêm mới vào Không gian</h2>
-            <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: '4px', borderRadius: '6px' }}>✕</button>
+            <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: '4px', borderRadius: '6px' }}>✕</button>
           </div>
 
           <div style={{ padding: '16px 24px 0' }}>
             <div style={{ display: 'flex', gap: 8, background: '#f1f5f9', padding: 4, borderRadius: 8 }}>
               {['space', 'folder', 'list'].map(tab => (
-                <button key={tab} type="button" onClick={() => setActiveTab(tab)} style={{ flex: 1, padding: '8px 0', border: 'none', background: activeTab === tab ? 'white' : 'transparent', borderRadius: 6, cursor: 'pointer', fontWeight: 600, color: activeTab === tab ? '#0052cc' : '#64748b', boxShadow: activeTab === tab ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', textTransform: 'capitalize', fontSize: '13px' }}>
+                <button key={tab} type="button" onClick={() => setActiveTab(tab)} style={{ flex: 1, padding: '8px 0', border: 'none', background: activeTab === tab ? 'white' : 'transparent', borderRadius: 6, cursor: 'pointer', fontWeight: 600, color: activeTab === tab ? '#0052cc' : '#64748b', boxShadow: activeTab === tab ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', textTransform: 'capitalize', fontSize: '13px', transition: 'all 0.2s' }}>
                   {tab === 'space' ? 'Khu vực' : tab === 'folder' ? 'Thư mục' : 'Danh sách'}
                 </button>
               ))}
@@ -102,16 +103,31 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column' }}>
             <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              
+              {!activeWorkspace && (
+                <div style={{ padding: '12px', background: '#fee2e2', color: '#b91c1c', borderRadius: '8px', fontSize: '13px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  ⚠️ Bạn chưa có Workspace nào. Vui lòng tạo Workspace trước.
+                </div>
+              )}
+
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '8px' }}>Tên <span style={{ color: '#ef4444' }}>*</span></label>
-                <input autoFocus required placeholder="Nhập tên..." value={formData.name} onChange={handleNameChange} onFocus={() => setFocusInput(true)} onBlur={() => setFocusInput(false)} style={{ width: '100%', padding: '10px 14px', fontSize: '14px', border: focusInput ? '2px solid #0052cc' : '1px solid #cbd5e1', borderRadius: '8px', outline: 'none', boxSizing: 'border-box', transition: 'all 0.2s' }} />
+                {/* ĐÃ MỞ KHÓA HOÀN TOÀN Ô NÀY - BÁC GÕ THOẢI MÁI NHÉ */}
+                <input 
+                  autoFocus 
+                  required 
+                  placeholder="Nhập tên..." 
+                  value={formData.name} 
+                  onChange={e => setFormData({...formData, name: e.target.value})} 
+                  style={{ width: '100%', padding: '10px 14px', fontSize: '14px', border: '1px solid #cbd5e1', borderRadius: '8px', outline: 'none', boxSizing: 'border-box' }} 
+                />
               </div>
 
               {(activeTab === 'folder' || activeTab === 'list') && (
                 <div>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '8px' }}>Chọn Khu vực (Space) <span style={{ color: '#ef4444' }}>*</span></label>
                   <select required value={spaceId} onChange={(e) => { setSpaceId(e.target.value); setFolderId(''); }} style={{ width: '100%', padding: '10px 14px', fontSize: '14px', border: '1px solid #cbd5e1', borderRadius: '8px', outline: 'none', background: 'white' }}>
-                    {hierarchy.length === 0 ? (
+                    {(!hierarchy || hierarchy.length === 0) ? (
                       <option value="" disabled>⚠️ Hãy tạo Khu vực trước!</option>
                     ) : (
                       <>
@@ -123,7 +139,7 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
                 </div>
               )}
 
-              {activeTab === 'list' && selectedSpace && selectedSpace.folders.length > 0 && (
+              {activeTab === 'list' && selectedSpace && selectedSpace.folders && selectedSpace.folders.length > 0 && (
                 <div>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '8px' }}>Chọn Thư mục (Tùy chọn)</label>
                   <select value={folderId} onChange={(e) => setFolderId(e.target.value)} style={{ width: '100%', padding: '10px 14px', fontSize: '14px', border: '1px solid #cbd5e1', borderRadius: '8px', outline: 'none', background: 'white' }}>
@@ -136,7 +152,7 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
               <div style={{ display: 'flex', gap: '16px' }}>
                 <div style={{ flex: 1 }}>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '8px' }}>Chữ viết tắt</label>
-                  <input required maxLength={3} value={formData.abbr} onChange={e => setFormData({...formData, abbr: e.target.value.toUpperCase()})} style={{ width: '100%', padding: '10px 14px', fontSize: '14px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '8px', outline: 'none', boxSizing: 'border-box' }} />
+                  <input maxLength={3} value={formData.abbr} onChange={e => setFormData({...formData, abbr: e.target.value.toUpperCase()})} style={{ width: '100%', padding: '10px 14px', fontSize: '14px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '8px', outline: 'none', boxSizing: 'border-box' }} />
                 </div>
                 <div style={{ flex: 2 }}>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '8px' }}>Màu sắc</label>
@@ -150,8 +166,8 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
             </div>
 
             <div style={{ padding: '16px 24px', background: '#f8fafc', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-              <button type="button" onClick={onClose} style={{ padding: '10px 16px', fontSize: '14px', fontWeight: 600, color: '#475569', background: 'white', border: '1px solid #cbd5e1', borderRadius: '8px', cursor: 'pointer' }}>Hủy</button>
-              <button type="submit" disabled={loading || (activeTab !== 'space' && !spaceId)} style={{ padding: '10px 20px', fontSize: '14px', fontWeight: 600, color: 'white', background: '#0052cc', border: 'none', borderRadius: '8px', cursor: loading ? 'wait' : 'pointer' }}>
+              <button type="button" onClick={onClose} style={{ padding: '10px 16px', fontSize: '14px', fontWeight: 600, color: '#475569', background: 'white', border: '1px solid #cbd5e1', borderRadius: '8px', cursor: 'pointer', transition: 'background 0.2s' }}>Hủy</button>
+              <button type="submit" disabled={loading || (activeTab !== 'space' && !spaceId)} style={{ padding: '10px 20px', fontSize: '14px', fontWeight: 600, color: 'white', background: (activeTab !== 'space' && !spaceId) ? '#94a3b8' : '#0052cc', border: 'none', borderRadius: '8px', cursor: loading ? 'wait' : 'pointer' }}>
                 {loading ? 'Đang tạo...' : 'Tạo mới'}
               </button>
             </div>
